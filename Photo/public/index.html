@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Photobooth Pro</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 30px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            text-align: center;
+            font-size: 3em;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 40px;
+            font-size: 1.2em;
+        }
+        
+        .main-content {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 30px;
+        }
+        
+        .camera-section {
+            background: #000;
+            border-radius: 20px;
+            overflow: hidden;
+            position: relative;
+            aspect-ratio: 16/9;
+        }
+        
+        #videoElement {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+        
+        #photoPreview {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            display: none;
+        }
+        
+        #overlayImage {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            object-fit: cover;
+        }
+        
+        .countdown {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 150px;
+            color: white;
+            font-weight: bold;
+            text-shadow: 0 0 40px rgba(0, 0, 0, 0.8);
+            display: none;
+            z-index: 10;
+        }
+        
+        .live-indicator {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: #ff0000;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 25px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            z-index: 5;
+        }
+        
+        .live-dot {
+            width: 12px;
+            height: 12px;
+            background: white;
+            border-radius: 50%;
+            animation: blink 1s infinite;
+        }
+        
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+        
+        .controls {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+        
+        button {
+            padding: 18px 40px;
+            font-size: 18px;
+            font-weight: bold;
+            border: none;
+            border-radius: 15px;
+            cursor: pointer;
+            transition: all 0.3s;
+            color: white;
+        }
+        
+        button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+        
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .btn-capture {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-size: 24px;
+            padding: 20px 50px;
+        }
+        
+        .btn-retake {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+        
+        .btn-download {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        }
+        
+        .btn-qr {
+            background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+        }
+        
+        .gallery {
+            background: rgba(102, 126, 234, 0.1);
+            border-radius: 20px;
+            padding: 25px;
+            max-height: 800px;
+            overflow-y: auto;
+        }
+        
+        .gallery h2 {
+            color: #667eea;
+            margin-bottom: 20px;
+            font-size: 1.8em;
+        }
+        
+        .gallery-grid {
+            display: grid;
+            gap: 15px;
+        }
+        
+        .gallery-item {
+            background: white;
+            border-radius: 15px;
+            padding: 10px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s;
+        }
+        
+        .gallery-item:hover {
+            transform: scale(1.02);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+        
+        .gallery-item img {
+            width: 100%;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            cursor: pointer;
+        }
+        
+        .gallery-actions {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .gallery-actions button {
+            flex: 1;
+            padding: 10px;
+            font-size: 14px;
+        }
+        
+        .timestamp {
+            text-align: center;
+            font-size: 11px;
+            color: #999;
+            margin-top: 8px;
+        }
+        
+        .empty-gallery {
+            text-align: center;
+            color: #999;
+            padding: 60px 20px;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        
+        .modal.show {
+            display: flex;
+        }
+        
+        .modal-content {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            text-align: center;
+            max-width: 500px;
+            width: 90%;
+        }
+        
+        .modal-content h2 {
+            color: #667eea;
+            margin-bottom: 20px;
+            font-size: 2em;
+        }
+        
+        #qrCodeImage {
+            width: 300px;
+            height: 300px;
+            margin: 20px auto;
+            background: white;
+            border: 4px solid #667eea;
+            border-radius: 10px;
+            padding: 10px;
+        }
+        
+        .qr-instructions {
+            color: #666;
+            margin: 20px 0;
+            font-size: 1.1em;
+        }
+        
+        .flash {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: white;
+            z-index: 9999;
+            display: none;
+            pointer-events: none;
+        }
+        
+        @media (max-width: 1024px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="flash" id="flashEffect"></div>
+    
+    <div class="container">
+        <h1>📸 Photobooth Pro</h1>
+        <p class="subtitle">Captura momentos inolvidables</p>
+        
+        <div class="main-content">
+            <div>
+                <div class="camera-section">
+                    <video id="videoElement" autoplay playsinline muted></video>
+                    <img id="photoPreview" alt="Foto capturada">
+                    <img id="overlayImage" alt="Marco decorativo">
+                    <div class="countdown" id="countdownDisplay"></div>
+                    <div class="live-indicator" id="liveIndicator">
+                        <div class="live-dot"></div>
+                        EN VIVO
+                    </div>
+                </div>
+                
+                <div class="controls" id="captureMode">
+                    <button class="btn-capture" onclick="iniciarContador()" id="btnCapture">
+                        📷 TOMAR FOTO
+                    </button>
+                </div>
+                
+                <div class="controls" id="reviewMode" style="display: none;">
+                    <button class="btn-retake" onclick="volverACamara()">
+                        🔄 Tomar Otra
+                    </button>
+                    <button class="btn-qr" onclick="mostrarQR()">
+                        📱 Generar QR
+                    </button>
+                    <button class="btn-download" onclick="descargarFotoActual()">
+                        💾 Descargar
+                    </button>
+                </div>
+            </div>
+            
+            <div class="gallery">
+                <h2>🖼️ Galería (<span id="contadorFotos">0</span>)</h2>
+                <div class="gallery-grid" id="galeriaContenedor">
+                    <div class="empty-gallery">
+                        <p style="font-size: 3em;">📷</p>
+                        <p>Aún no hay fotos</p>
+                        <p style="font-size: 0.9em; margin-top: 10px;">¡Toma tu primera foto!</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="modal" id="modalQR">
+        <div class="modal-content">
+            <h2>📱 ¡Escanea para Descargar!</h2>
+            <img id="qrCodeImage" alt="Código QR">
+            <p class="qr-instructions">
+                Escanea este código con tu celular<br>
+                para descargar la foto
+            </p>
+            <button class="btn-download" onclick="descargarFotoActual()">
+                💾 O Descarga Directamente
+            </button>
+            <button onclick="cerrarModal()" style="background: #ddd; color: #333; margin-top: 10px;">
+                Cerrar
+            </button>
+        </div>
+    </div>
+
+    <canvas id="canvasOculto" style="display: none;"></canvas>
+
+    <script>
+        // ⭐⭐⭐ CONFIGURA AQUÍ LA URL DE TU MARCO PNG ⭐⭐⭐
+        const URL_MARCO = 'marco.png'; // Pon tu archivo marco.png en la misma carpeta
+        
+        let streamVideo = null;
+        let arrayFotos = [];
+        let fotoActualNombre = null;
+        
+        const video = document.getElementById('videoElement');
+        const preview = document.getElementById('photoPreview');
+        const overlay = document.getElementById('overlayImage');
+        const canvas = document.getElementById('canvasOculto');
+        const ctx = canvas.getContext('2d');
+        
+        window.addEventListener('load', iniciarCamara);
+        
+        async function iniciarCamara() {
+            try {
+                streamVideo = await navigator.mediaDevices.getUserMedia({
+                    video: {
+                        facingMode: 'user',
+                        width: { ideal: 1920 },
+                        height: { ideal: 1080 }
+                    }
+                });
+                video.srcObject = streamVideo;
+                overlay.src = URL_MARCO;
+                cargarFotosExistentes();
+                console.log('✅ Cámara iniciada');
+            } catch (error) {
+                console.error('❌ Error:', error);
+                alert('No se pudo acceder a la cámara. Asegúrate de dar permisos.');
+            }
+        }
+        
+        async function cargarFotosExistentes() {
+            try {
+                const response = await fetch('/api/fotos');
+                const data = await response.json();
+                if (data.success) {
+                    arrayFotos = data.fotos;
+                    actualizarGaleria();
+                }
+            } catch (error) {
+                console.log('No se pudieron cargar fotos existentes');
+            }
+        }
+        
+        function iniciarContador() {
+            const btnCapture = document.getElementById('btnCapture');
+            const countdownDisplay = document.getElementById('countdownDisplay');
+            
+            btnCapture.disabled = true;
+            countdownDisplay.style.display = 'block';
+            
+            let contador = 3;
+            countdownDisplay.textContent = contador;
+            
+            const intervalo = setInterval(() => {
+                contador--;
+                if (contador > 0) {
+                    countdownDisplay.textContent = contador;
+                } else {
+                    clearInterval(intervalo);
+                    countdownDisplay.style.display = 'none';
+                    capturarFoto();
+                    btnCapture.disabled = false;
+                }
+            }, 1000);
+        }
+        
+        async function capturarFoto() {
+            console.log('📸 Capturando foto...');
+            
+            const flash = document.getElementById('flashEffect');
+            flash.style.display = 'block';
+            setTimeout(() => flash.style.display = 'none', 200);
+            
+            canvas.width = 1920;
+            canvas.height = 1080;
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            
+            if (overlay.complete && overlay.naturalWidth > 0) {
+                ctx.drawImage(overlay, 0, 0, canvas.width, canvas.height);
+            }
+            
+            const fotoBase64 = canvas.toDataURL('image/png');
+            
+            // Enviar al servidor para guardar
+            try {
+                const response = await fetch('/api/guardar-foto', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        imagen: fotoBase64
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    console.log('✅ Foto guardada:', data.filename);
+                    fotoActualNombre = data.filename;
+                    
+                    arrayFotos.push({
+                        filename: data.filename,
+                        url: data.url,
+                        timestamp: data.timestamp
+                    });
+                    
+                    preview.src = data.url;
+                    mostrarFotoCapturada();
+                    actualizarGaleria();
+                } else {
+                    alert('Error al guardar la foto: ' + data.error);
+                }
+            } catch (error) {
+                console.error('❌ Error al enviar foto:', error);
+                alert('Error al guardar la foto. Asegúrate que el servidor esté funcionando.');
+            }
+        }
+        
+        function mostrarFotoCapturada() {
+            video.style.display = 'none';
+            preview.style.display = 'block';
+            document.getElementById('liveIndicator').style.display = 'none';
+            document.getElementById('captureMode').style.display = 'none';
+            document.getElementById('reviewMode').style.display = 'flex';
+        }
+        
+        function volverACamara() {
+            video.style.display = 'block';
+            preview.style.display = 'none';
+            document.getElementById('liveIndicator').style.display = 'flex';
+            document.getElementById('captureMode').style.display = 'flex';
+            document.getElementById('reviewMode').style.display = 'none';
+        }
+        
+        function descargarFotoActual() {
+            if (!fotoActualNombre) {
+                alert('No hay foto para descargar');
+                return;
+            }
+            window.open('fotos/' + fotoActualNombre, '_blank');
+        }
+        
+        async function mostrarQR() {
+            if (!fotoActualNombre) {
+                alert('No hay foto para generar QR');
+                return;
+            }
+            
+            // Obtener URL completa de la foto
+            const urlCompleta = window.location.origin + window.location.pathname.replace('index.html', '') + 'fotos/' + fotoActualNombre;
+            
+            // Generar QR usando API gratuita
+            const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(urlCompleta)}`;
+            
+            document.getElementById('qrCodeImage').src = qrUrl;
+            document.getElementById('modalQR').classList.add('show');
+        }
+        
+        function cerrarModal() {
+            document.getElementById('modalQR').classList.remove('show');
+        }
+        
+        function actualizarGaleria() {
+            const galeria = document.getElementById('galeriaContenedor');
+            const contador = document.getElementById('contadorFotos');
+            
+            contador.textContent = arrayFotos.length;
+            
+            if (arrayFotos.length === 0) {
+                galeria.innerHTML = `
+                    <div class="empty-gallery">
+                        <p style="font-size: 3em;">📷</p>
+                        <p>Aún no hay fotos</p>
+                        <p style="font-size: 0.9em; margin-top: 10px;">¡Toma tu primera foto!</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            const fotosHTML = arrayFotos.slice().reverse().map(foto => `
+                <div class="gallery-item">
+                    <img src="${foto.url}" alt="${foto.filename}">
+                    <div class="gallery-actions">
+                        <button class="btn-qr" onclick="generarQRGaleria('${foto.filename}')">
+                            📱 QR
+                        </button>
+                        <button class="btn-download" onclick="window.open('${foto.url}', '_blank')">
+                            💾 Descargar
+                        </button>
+                    </div>
+                    <div class="timestamp">${foto.timestamp}</div>
+                </div>
+            `).join('');
+            
+            galeria.innerHTML = fotosHTML;
+        }
+        
+        function generarQRGaleria(filename) {
+            const urlCompleta = window.location.origin + window.location.pathname.replace('index.html', '') + 'fotos/' + filename;
+            const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(urlCompleta)}`;
+            
+            document.getElementById('qrCodeImage').src = qrUrl;
+            document.getElementById('modalQR').classList.add('show');
+            fotoActualNombre = filename;
+        }
+        
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                cerrarModal();
+            }
+        });
+    </script>
+</body>
+</html>
